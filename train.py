@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, models, transforms
-from dataloader import TrainDataset, ValDataset, collater, Augmenter, RandomCroper
+from dataloader import TrainDataset, ValDataset, collater, RandomCroper, RandomFlip
 from torch.utils.data import Dataset, DataLoader
 from terminaltables import AsciiTable, DoubleTable, SingleTable
 from torch.optim import lr_scheduler
@@ -16,10 +16,10 @@ import os
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description="Train progress for retinaface.")
+    parser = argparse.ArgumentParser(description="Train program for retinaface.")
     parser.add_argument('--data_path', type=str, help='Path for dataset,default WIDERFACE')
     parser.add_argument('--batch', type=int, default=16, help='Batch size')
-    parser.add_argument('--epochs', type=int, default=100, help='Max training epochs')
+    parser.add_argument('--epochs', type=int, default=200, help='Max training epochs')
     parser.add_argument('--shuffle', type=bool, default=True, help='Shuffle dataset or not')
     parser.add_argument('--img_size', type=int, default=640, help='Input image size')
     parser.add_argument('--verbose', type=int, default=10, help='Log verbose')
@@ -106,7 +106,7 @@ def main():
                 print(log_str)
 
         # Eval
-        if epoch % 3 == 0:
+        if epoch % args.eval_step == 0:
             print('-------- RetinaFace Pytorch --------')
             print ('Evaluating epoch {}'.format(epoch))
             recall, precision = eval_widerface.evaluate(dataloader_val,retinaface)
