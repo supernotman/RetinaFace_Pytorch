@@ -133,7 +133,7 @@ def collater(data):
     return {'img': batched_imgs, 'annot': annot_padded}
 
 class RandomCroper(object):
-    def __call__(self, sample, input_size=640, max_side=1024):
+    def __call__(self, sample, input_size=640):
         image, annots = sample['img'], sample['annot']
         rows, cols, _ = image.shape        
         
@@ -207,25 +207,32 @@ class RandomCroper(object):
 
         return {'img': torch.from_numpy(new_image), 'annot': torch.from_numpy(annots)}
 
-
-class Augmenter(object):
-    """Convert ndarrays in sample to Tensors."""
-
-    def __call__(self, sample, flip_x=0.5):
+class RandomFlip(object):
+    def __call__(self, sample, input_size=640, flip_x=0.5):
 
         if np.random.rand() < flip_x:
             image, annots = sample['img'], sample['annot']
-            image = image[:, ::-1, :]
-
-            rows, cols, channels = image.shape
-
-            x1 = annots[:, 0].copy()
-            x2 = annots[:, 2].copy()
             
-            x_tmp = x1.copy()
+            # flip image
+            image = torch.flip(image,[1])
 
-            annots[:, 0] = cols - x2
-            annots[:, 2] = cols - x_tmp
+            image = image.numpy()
+            annots = annots.numpy()
+            
+            # relocate bboxes
+            x1 = annots[:, 0].copy()
+            x2 = annots[:, 2].copy()      
+            x_tmp = x1.copy()
+            annots[:, 0] = input_size - x2
+            annots[:, 2] = input_size - x_tmp
+
+            # relocate landmarks
+            l_mask = annots[:,4]!=-1
+            #l_x_tmp = annots[l_mask,4::2].copy()
+            annots[l_mask,4::2] = input_size - annots[l_mask,4::2]
+
+            image = torch.from_numpy(image)
+            annots = torch.from_numpy(annots)
 
             sample = {'img': image, 'annot': annots}
 
