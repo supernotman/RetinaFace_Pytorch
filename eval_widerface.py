@@ -42,7 +42,7 @@ def get_detections(img_batch, model,score_threshold=0.5, iou_threshold=0.5):
             picked_boxes.append(keep_boxes)
             picked_landmarks.append(keep_landmarks)
         
-        return picked_boxes,picked_landmarks
+        return picked_boxes, picked_landmarks
 
 def compute_overlap(a,b):
     area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
@@ -70,34 +70,39 @@ def evaluate(val_data,retinaFace,threshold=0.5):
     for data in tqdm(iter(val_data)):
         img_batch = data['img'].cuda()
         annots = data['annot'].cuda()
-        #annots = annots[annots[:,0]!=-1] 
+
 
         picked_boxes,_ = get_detections(img_batch,retinaFace)
-        #print('picked_boxes size:',len(picked_boxes))
-        #recall_batch = 0.
-        #precision_batch = 0.
         recall_iter = 0.
         precision_iter = 0.
 
-        for j, boxes in enumerate(picked_boxes):
-            
+        for j, boxes in enumerate(picked_boxes):          
             annot_boxes = annots[j]
             annot_boxes = annot_boxes[annot_boxes[:,0]!=-1]
-            annot_boxes = annot_boxes.cpu().numpy()
-            boxes = boxes.cpu().numpy()
-            if boxes.shape[0] == 0 or annot_boxes.shape[0] == 0:
 
+            if boxes is None and annot_boxes.shape[0] == 0:
                 continue
-
-            overlap = compute_overlap(annot_boxes, boxes)
+            elif boxes is None and annot_boxes.shape[0] != 0:
+                recall_iter += 0.
+                precision_iter += 1.
+                continue
+            elif boxes is not None and annot_boxes.shape[0] == 0:
+                recall_iter += 1.
+                precision_iter += 0.   
+                continue         
             
-            # count detected
+            # annot_boxes = annot_boxes.cpu().numpy()
+            # boxes = boxes.cpu().numpy()
+            # overlap = compute_overlap(annot_boxes, boxes)
+            overlap = ops.boxes.box_iou(annot_boxes, boxes)
+                 
+            # compute recall
             max_overlap, _ = torch.max(overlap,dim=1)
             mask = max_overlap > threshold
             detected_num = mask.sum().item()
             recall_iter += detected_num/annot_boxes.shape[0]
 
-            # count true_positives
+            # compute precision
             max_overlap, _ = torch.max(overlap,dim=0)
             mask = max_overlap > threshold
             true_positives = mask.sum().item()
