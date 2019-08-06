@@ -75,8 +75,8 @@ class PyramidFeatures(nn.Module):
 class ClassHead(nn.Module):
     def __init__(self,inchannels=512,num_anchors=3):
         super(ClassHead,self).__init__()
-        self.conv1x1 = nn.Conv2d(inchannels,num_anchors*2,kernel_size=(1,1),stride=1)
-        #self.conv1x1 = nn.Conv2d(inchannels,num_anchors*1,kernel_size=(1,1),stride=1)
+        self.num_anchors = num_anchors
+        self.conv1x1 = nn.Conv2d(inchannels,self.num_anchors*2,kernel_size=(1,1),stride=1)
 
         # if use focal loss instead of OHEM
         #self.output_act = nn.Sigmoid()
@@ -87,11 +87,13 @@ class ClassHead(nn.Module):
 
     def forward(self,x):
         out = self.conv1x1(x)
-        out = out.permute(0,2,3,1).contiguous().view(out.shape[0], -1, 2)
+        out = out.permute(0,2,3,1)
+        b, h, w, c = out.shape
+        out = out.view(b, h, w, self.num_anchors, 2)
+        #out = out.permute(0,2,3,1).contiguous().view(out.shape[0], -1, 2)
         out = self.output_act(out)
-
-        return out
-        #return out.contiguous().view(out.shape[0], -1, 1)
+        
+        return out.contiguous().view(out.shape[0], -1, 2)
 
 class BboxHead(nn.Module):
     def __init__(self,inchannels=512,num_anchors=3):
@@ -111,6 +113,69 @@ class LandmarkHead(nn.Module):
 
     def forward(self,x):
         out = self.conv1x1(x)
+        out = out.permute(0,2,3,1)
+
+        return out.contiguous().view(out.shape[0], -1, 10)
+
+
+class ClassHead_(nn.Module):
+    def __init__(self,inchannels=256,num_anchors=3):
+        super(ClassHead_,self).__init__()
+        self.num_anchors = num_anchors
+        self.feature_head = self._make_head(self.num_anchors*2)
+        self.output_act = nn.LogSoftmax(dim=-1)
+
+    def _make_head(self,out_size):
+        layers = []
+        for _ in range(4):
+            layers += [nn.Conv2d(256, 256, 3, padding=1), nn.ReLU(inplace=True)]
+        layers += [nn.Conv2d(256, out_size, 3, padding=1)]
+        return nn.Sequential(*layers)        
+
+    def forward(self,x):
+        out = self.feature_head(x)
+        out = out.permute(0,2,3,1)
+        b, h, w, c = out.shape
+        out = out.view(b, h, w, self.num_anchors, 2)
+        #out = out.permute(0,2,3,1).contiguous().view(out.shape[0], -1, 2)
+        out = self.output_act(out)
+        
+        return out.contiguous().view(out.shape[0], -1, 2)
+
+class BboxHead_(nn.Module):
+    def __init__(self,inchannels=256,num_anchors=3):
+        super(BboxHead_,self).__init__()
+        self.num_anchors = num_anchors
+        self.feature_head = self._make_head(self.num_anchors*4)
+        
+    def _make_head(self,out_size):
+        layers = []
+        for _ in range(4):
+            layers += [nn.Conv2d(256, 256, 3, padding=1), nn.ReLU(inplace=True)]
+        layers += [nn.Conv2d(256, out_size, 3, padding=1)]
+        return nn.Sequential(*layers)       
+
+    def forward(self,x):
+        out = self.feature_head(x)
+        out = out.permute(0,2,3,1)
+
+        return out.contiguous().view(out.shape[0], -1, 4)
+
+class LandmarkHead_(nn.Module):
+    def __init__(self,inchannels=256,num_anchors=3):
+        super(LandmarkHead_,self).__init__()
+        self.num_anchors = num_anchors
+        self.feature_head = self._make_head(self.num_anchors*10)
+
+    def _make_head(self,out_size):
+        layers = []
+        for _ in range(4):
+            layers += [nn.Conv2d(256, 256, 3, padding=1), nn.ReLU(inplace=True)]
+        layers += [nn.Conv2d(256, out_size, 3, padding=1)]
+        return nn.Sequential(*layers)       
+
+    def forward(self,x):
+        out = self.feature_head(x)
         out = out.permute(0,2,3,1)
 
         return out.contiguous().view(out.shape[0], -1, 10)
@@ -188,6 +253,11 @@ class Context(nn.Module):
 
         return out
 
+def initialize_layer(layer):
+    if isinstance(layer, nn.Conv2d):
+        nn.init.normal_(layer.weight, std=0.01)
+        if layer.bias is not None:
+            nn.init.constant_(layer.bias, val=0)
 
 class ResNet(nn.Module):
 
@@ -214,13 +284,13 @@ class ResNet(nn.Module):
 
         self.context = self._make_contextlayer()       
         
-        # self.clsHead = ClassHead()
-        # self.bboxHead = BboxHead()
-        # self.ldmHead = LandmarkHead()
+        self.clsHead = ClassHead_()
+        self.bboxHead = BboxHead_()
+        self.ldmHead = LandmarkHead_()
 
-        self.clsHead = self._make_class_head()
-        self.bboxHead = self._make_bbox_head()
-        self.ldmHead = self._make_landmark_head()
+        # self.clsHead = self._make_class_head()
+        # self.bboxHead = self._make_bbox_head()
+        # self.ldmHead = self._make_landmark_head()
 
         self.anchors = Anchors()
 
@@ -230,7 +300,12 @@ class ResNet(nn.Module):
 
         self.freeze_bn()
 
-        #initialization
+        # initialize head
+        # self.clsHead.apply(initialize_layer)
+        # self.bboxHead.apply(initialize_layer)
+        # self.ldmHead.apply(initialize_layer)
+
+        # initialize context
         for layer in self.context:
             for m in layer.modules():
                 if isinstance(m, nn.Conv2d):
@@ -240,10 +315,6 @@ class ResNet(nn.Module):
                 if isinstance(m, nn.BatchNorm2d):
                     nn.init.constant_(m.weight, 1)
                     nn.init.constant_(m.bias, 0)
-
-        for layer in self.clsHead:
-            nn.init.kaiming_normal_(layer.conv1x1.weight,mode='fan_out', nonlinearity='relu')
-
 
     def _make_contextlayer(self,fpn_num=5,inchannels=256):
         context = nn.ModuleList()
@@ -318,11 +389,15 @@ class ResNet(nn.Module):
         x4 = self.layer4(x3)
 
         features = self.fpn([x1, x2, x3, x4])
-        context_features = [self.context[i](feature) for i,feature in enumerate(features)]
+        #context_features = [self.context[i](feature) for i,feature in enumerate(features)]
 
-        bbox_regressions = torch.cat([self.bboxHead[i](feature) for i,feature in enumerate(context_features)], dim=1)
-        ldm_regressions = torch.cat([self.ldmHead[i](feature) for i,feature in enumerate(context_features)], dim=1)
-        classifications = torch.cat([self.clsHead[i](feature) for i,feature in enumerate(context_features)],dim=1)
+        # bbox_regressions = torch.cat([self.bboxHead[i](feature) for i,feature in enumerate(context_features)], dim=1)
+        # ldm_regressions = torch.cat([self.ldmHead[i](feature) for i,feature in enumerate(context_features)], dim=1)
+        # classifications = torch.cat([self.clsHead[i](feature) for i,feature in enumerate(context_features)],dim=1)
+
+        bbox_regressions = torch.cat([self.bboxHead(feature) for feature in features], dim=1)
+        ldm_regressions = torch.cat([self.ldmHead(feature) for feature in features], dim=1)
+        classifications = torch.cat([self.clsHead(feature) for feature in features],dim=1)
 
         anchors = self.anchors(img_batch)
 
