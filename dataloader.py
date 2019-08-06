@@ -1,6 +1,7 @@
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
 from torch.utils.data import Dataset
+import torch.nn.functional as F
 from skimage.util import crop
 import skimage.transform
 from PIL import Image
@@ -11,6 +12,7 @@ import skimage.io
 import skimage
 import random
 import torch
+import math
 import os
 
 class TrainDataset(Dataset):
@@ -84,9 +86,6 @@ class TrainDataset(Dataset):
 
         return sample
 
-    def image_aspect_ratio(self, image_index):
-        image = Image.open(self.imgs_path[image_index])
-        return float(image.width) / float(image.height)
 
 def collater(data):
     batch_size = len(data)
@@ -97,7 +96,6 @@ def collater(data):
     # batch images
     height = imgs[0].shape[0]
     width = imgs[0].shape[1]
-
     assert height==width ,'Input width must eqs height'
 
     input_size = width
@@ -212,7 +210,7 @@ class RandomFlip(object):
 
         if np.random.rand() < flip_x:
             image, annots = sample['img'], sample['annot']
-            
+
             # flip image
             image = torch.flip(image,[1])
 
@@ -228,8 +226,12 @@ class RandomFlip(object):
 
             # relocate landmarks
             l_mask = annots[:,4]!=-1
-            #l_x_tmp = annots[l_mask,4::2].copy()
-            annots[l_mask,4::2] = input_size - annots[l_mask,4::2]
+            annots[l_mask, 4::2] = input_size - annots[l_mask,4::2]
+            l_tmp = annots.copy()
+            annots[l_mask, 4] = l_tmp[l_mask, 6]
+            annots[l_mask, 6] = l_tmp[l_mask, 4]
+            annots[l_mask, 10] = l_tmp[l_mask, 12]
+            annots[l_mask, 12] = l_tmp[l_mask, 10]
 
             image = torch.from_numpy(image)
             annots = torch.from_numpy(annots)
@@ -237,6 +239,66 @@ class RandomFlip(object):
             sample = {'img': image, 'annot': annots}
 
         return sample
+
+class Resizer(object):
+    def __call__(self, sample, input_size=640):
+        image, annots = sample['img'], sample['annot']
+
+        rows, cols, _ = image.shape 
+        long_side = max(rows, cols)
+        scale = input_size / long_side
+
+        # resize image
+        resized_image = skimage.transform.resize(image,(int(rows*input_size / long_side),int(cols*input_size / long_side)))
+        resized_image = resized_image * 255
+        
+        assert (resized_image.shape[0]==640 or resized_image.shape[1]==640),'resized image size not 640'
+
+        if annots.shape[1] > 4 :
+            annots = annots * scale
+        else :
+            annots[:,:4] = annots[:,:4] * scale
+        
+        return {'img': resized_image, 'annot': annots}
+
+
+class PadToSquare(object):
+    def __call__(self, sample, input_size=640):    
+        image, annots = sample['img'], sample['annot']
+        rows, cols, _ = image.shape
+        dim_diff = np.abs(rows - cols)
+
+        # relocate bbox annotations
+        if rows == input_size:
+            diff = input_size - cols
+            annots[:,0] = annots[:,0] + diff/2
+            annots[:,2] = annots[:,2] + diff/2
+        elif cols == input_size:
+            diff = input_size - rows
+            annots[:,1] = annots[:,1] + diff/2
+            annots[:,3] = annots[:,3] + diff/2
+        if annots.shape[1] > 4 :
+            ldm_mask = annots[:,4] > 0
+            if rows == input_size:
+                diff = input_size - cols
+                annots[ldm_mask,4::2] = annots[ldm_mask,4::2] + diff/2
+            elif cols == input_size:
+                diff = input_size - rows
+                annots[ldm_mask,5::2] = annots[ldm_mask,5::2] + diff/2
+
+        # pad image
+        img = torch.from_numpy(image)
+        img = img.permute(2,0,1)
+        pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
+        pad = (0, 0, pad1, pad2) if rows <= cols else (pad1, pad2, 0, 0)
+
+        padded_img = F.pad(img, pad, "constant", value=0)
+        padded_img = padded_img.permute(1,2,0)
+
+        annots = torch.from_numpy(annots)
+
+        return {'img': padded_img, 'annot': annots}
+
 
 class ValDataset(Dataset):
     def __init__(self,txt_path,transform=None,flip=False):
