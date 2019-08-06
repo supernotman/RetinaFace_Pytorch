@@ -7,7 +7,6 @@ from tqdm import tqdm
 import torchvision.ops as ops
 
 def get_detections(img_batch, model,score_threshold=0.5, iou_threshold=0.5):
-#def get_detections(img_batch,model,score_threshold=0.05,iou_threshold=0.05):
     model.eval()
     with torch.no_grad():
         classifications, bboxes, landmarks = model(img_batch)
@@ -91,9 +90,6 @@ def evaluate(val_data,retinaFace,threshold=0.5):
                 precision_iter += 0.   
                 continue         
             
-            # annot_boxes = annot_boxes.cpu().numpy()
-            # boxes = boxes.cpu().numpy()
-            # overlap = compute_overlap(annot_boxes, boxes)
             overlap = ops.boxes.box_iou(annot_boxes, boxes)
                  
             # compute recall
