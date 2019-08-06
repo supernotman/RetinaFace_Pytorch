@@ -11,6 +11,7 @@ import torchvision
 import eval_widerface
 import torchvision_model
 import model
+import os
 
 def pad_to_square(img, pad_value):
     _, h, w = img.shape
@@ -24,7 +25,7 @@ def pad_to_square(img, pad_value):
 
     return img, pad
 
-def resize(image, size)
+def resize(image, size):
     image = F.interpolate(image.unsqueeze(0), size=size, mode="nearest").squeeze(0)
     return image
 
@@ -32,7 +33,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Detect program for retinaface.")
     parser.add_argument('--image_path', type=str, default='test.jpg', help='Path for image to detect')
     parser.add_argument('--model_path', type=str, help='Path for model')
-    parser.add_argument('--save_path', type=str, default='./', help='Path for result image')
+    parser.add_argument('--save_path', type=str, default='./out', help='Path for result image')
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
     args = parser.parse_args()
 
@@ -91,7 +92,9 @@ def main():
                 cv2.circle(img,(landmark[6],landmark[7]),radius=1,color=(0,255,255),thickness=2)
                 cv2.circle(img,(landmark[8],landmark[9]),radius=1,color=(255,255,0),thickness=2)
 
-
+    image_name = args.image_path.split('/')[-1]
+    save_path = os.path.join(args.save_path,image_name)
+    cv2.imwrite(save_path, img)
     cv2.imshow('RetinaFace-Pytorch',img)
     cv2.waitKey()
 
