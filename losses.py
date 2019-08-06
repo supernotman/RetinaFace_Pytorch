@@ -64,7 +64,7 @@ class LossLayer(nn.Module):
         anchor_ctr_y   = anchor[:, 1] + 0.5 * anchor_heights  
 
         #temp
-        #positive_indices_list = []    
+        positive_indices_list = []    
 
         for j in range(batch_size):
             classification = classifications[j,:,:]
@@ -82,7 +82,7 @@ class LossLayer(nn.Module):
                 ldm_regression_losses.append(torch.tensor(0).float().cuda())
 
                 # temp
-                #positive_indices_list.append([])
+                positive_indices_list.append([])
 
                 continue
 
@@ -103,7 +103,7 @@ class LossLayer(nn.Module):
             positive_indices = torch.ge(IoU_max, 0.5)
 
             #temp
-            #positive_indices_list.append(positive_indices)
+            positive_indices_list.append(positive_indices)
 
             num_positive_anchors = positive_indices.sum()
 
@@ -125,11 +125,11 @@ class LossLayer(nn.Module):
             ldm_positive_indices = ge0_mask & positive_indices
 
             # OHEM
-            negative_losses = classification[negative_indices,1]*-1
+            negative_losses = classification[negative_indices,1] * -1
             sorted_losses, _ = torch.sort(negative_losses, descending=True)
             if sorted_losses.numel() > keep_negative_anchors:
                 sorted_losses = sorted_losses[:keep_negative_anchors]
-            positive_losses = classification[positive_indices,0]*-1
+            positive_losses = classification[positive_indices,0] * -1
                 
             focal_loss = False
             # focal loss
@@ -222,6 +222,7 @@ class LossLayer(nn.Module):
                 ldm_regression_losses.append(torch.tensor(0).float().cuda())
 
         return torch.stack(classification_losses), torch.stack(bbox_regression_losses),torch.stack(ldm_regression_losses)
+        #return positive_indices_list, torch.stack(classification_losses), torch.stack(bbox_regression_losses),torch.stack(ldm_regression_losses)
 
 
 
