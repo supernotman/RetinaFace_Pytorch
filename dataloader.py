@@ -228,10 +228,10 @@ class RandomFlip(object):
             l_mask = annots[:,4]!=-1
             annots[l_mask, 4::2] = input_size - annots[l_mask,4::2]
             l_tmp = annots.copy()
-            annots[l_mask, 4] = l_tmp[l_mask, 6]
-            annots[l_mask, 6] = l_tmp[l_mask, 4]
-            annots[l_mask, 10] = l_tmp[l_mask, 12]
-            annots[l_mask, 12] = l_tmp[l_mask, 10]
+            annots[l_mask, 4:6] = l_tmp[l_mask, 6:8]
+            annots[l_mask, 6:8] = l_tmp[l_mask, 4:6]
+            annots[l_mask, 10:12] = l_tmp[l_mask, 12:]
+            annots[l_mask, 12:] = l_tmp[l_mask, 10:12]
 
             image = torch.from_numpy(image)
             annots = torch.from_numpy(annots)
