@@ -167,7 +167,8 @@ class RandomCroper(object):
 
         # relocate landmarks
         if annots.shape[1] > 4:
-            l_mask = annots[:,4]!=-1
+            # l_mask = annots[:,4]!=-1
+            l_mask = annots[:,4] > 0
             annots[l_mask,4] = annots[l_mask,4] - crop_x
             annots[l_mask,5] = annots[l_mask,5] - crop_y
             annots[l_mask,6] = annots[l_mask,6] - crop_x
@@ -225,7 +226,8 @@ class RandomFlip(object):
             annots[:, 2] = input_size - x_tmp
 
             # relocate landmarks
-            l_mask = annots[:,4]!=-1
+            # l_mask = annots[:, 4]!=-1
+            l_mask = annots[:, 4] > 0
             annots[l_mask, 4::2] = input_size - annots[l_mask,4::2]
             l_tmp = annots.copy()
             annots[l_mask, 4:6] = l_tmp[l_mask, 6:8]

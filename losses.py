@@ -72,7 +72,8 @@ class LossLayer(nn.Module):
             ldm_regression = ldm_regressions[j,:,:]
 
             annotation = annotations[j,:,:]
-            annotation = annotation[annotation[:,0] != -1]
+            # annotation = annotation[annotation[:,0] != -1]
+            annotation = annotation[annotation[:,0] > 0]
             bbox_annotation = annotation[:,:4]
             ldm_annotation = annotation[:,4:]
 
