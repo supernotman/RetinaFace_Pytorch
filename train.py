@@ -146,6 +146,11 @@ def main():
             recall, precision = eval_widerface.evaluate(dataloader_val,retinaface)
             print('Recall:',recall)
             print('Precision:',precision)
+	    writer.add_scalars('eval:',
+            {'recall': recall,
+            'precision': precision
+            },  
+            epoch)
 
         # Save model
         if (epoch + 1) % args.save_step == 0:
