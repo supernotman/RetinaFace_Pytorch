@@ -127,13 +127,10 @@ def main():
                 log_str +=table.table
                 print(log_str)
                 # write the log to tensorboard
-                writer.add_scalars('losses:',
-                {'total_loss': loss.item(),
-                'cls_loss': classification_loss.item(),
-                'bbox_loss': bbox_regression_loss.item(),
-                'ldm_loss': ldm_regression_loss.item()
-                },
-                iteration * args.verbose)
+                writer.add_scalar('losses:',loss.item(),iteration*args.verbose)
+                writer.add_scalar('class losses:',classification_loss.item(),iteration*args.verbose)
+                writer.add_scalar('box losses:',bbox_regression_loss.item(),iteration*args.verbose)
+                writer.add_scalar('landmark losses:',ldm_regression_loss.item(),iteration*args.verbose)
                 iteration +=1
         
         #scheduler.step()
@@ -147,9 +144,14 @@ def main():
             print('Recall:',recall)
             print('Precision:',precision)
 
+            writer.add_scalar('Recall:', recall, epoch*args.eval_step)
+            writer.add_scalar('Precision:', precision, epoch*args.eval_step)
+
         # Save model
         if (epoch + 1) % args.save_step == 0:
             torch.save(retinaface.state_dict(), args.save_path + '/model_epoch_{}.pt'.format(epoch + 1))
+
+    writer.close()
 
 
 if __name__=='__main__':
