@@ -100,12 +100,14 @@ class RegressionTransform(nn.Module):
         ctr_x   = anchors[:, :, 0] + 0.5 * widths
         ctr_y   = anchors[:, :, 1] + 0.5 * heights
 
+        # Rescale
+        ldm_deltas = ldm_deltas * self.std_ldm.cuda()
+        bbox_deltas = bbox_deltas * self.std_box.cuda()
+
         bbox_dx = bbox_deltas[:, :, 0] 
         bbox_dy = bbox_deltas[:, :, 1] 
         bbox_dw = bbox_deltas[:, :, 2]
         bbox_dh = bbox_deltas[:, :, 3]
-
-        #ldm_deltas = ldm_deltas * self.std_ldm.cuda()
 
         # get predicted boxes
         pred_ctr_x = ctr_x + bbox_dx * widths

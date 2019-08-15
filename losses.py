@@ -181,7 +181,7 @@ class LossLayer(nn.Module):
                 bbox_targets = bbox_targets.t()
 
                 # Rescale
-                #bbox_targets = bbox_targets/torch.Tensor([[0.1, 0.1, 0.2, 0.2]]).cuda()
+                bbox_targets = bbox_targets/torch.Tensor([[0.1, 0.1, 0.2, 0.2]]).cuda()
 
                 # smooth L1
                 # box losses
@@ -214,8 +214,8 @@ class LossLayer(nn.Module):
                 ldm_targets = ldm_targets.t()
 
                 # Rescale
-                #scale = torch.ones(1,10)*0.1
-                #ldm_targets = ldm_targets/scale.cuda()
+                scale = torch.ones(1,10)*0.1
+                ldm_targets = ldm_targets/scale.cuda()
 
                 ldm_regression_loss = self.smoothl1(ldm_targets, ldm_regression[ldm_positive_indices, :])
                 ldm_regression_losses.append(ldm_regression_loss)
