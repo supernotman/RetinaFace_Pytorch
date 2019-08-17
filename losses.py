@@ -78,9 +78,9 @@ class LossLayer(nn.Module):
             ldm_annotation = annotation[:,4:]
 
             if bbox_annotation.shape[0] == 0:
-                bbox_regression_losses.append(torch.tensor(0).float().cuda())
-                classification_losses.append(torch.tensor(0).float().cuda())
-                ldm_regression_losses.append(torch.tensor(0).float().cuda())
+                bbox_regression_losses.append(torch.tensor(0.,requires_grad=True).cuda())
+                classification_losses.append(torch.tensor(0.,requires_grad=True).cuda())
+                ldm_regression_losses.append(torch.tensor(0.,requires_grad=True).cuda())
 
                 # temp
                 positive_indices_list.append([])
@@ -154,7 +154,7 @@ class LossLayer(nn.Module):
                 if positive_indices.sum() > 0:
                     classification_losses.append(positive_losses.mean() + sorted_losses.mean())
                 else:
-                    classification_losses.append(torch.tensor(0).float().cuda())
+                    classification_losses.append(torch.tensor(0.,requires_grad=True).cuda())
 
 
             # compute bboxes loss
@@ -188,7 +188,7 @@ class LossLayer(nn.Module):
                 bbox_regression_loss = self.smoothl1(bbox_targets,bbox_regression[positive_indices, :])
                 bbox_regression_losses.append(bbox_regression_loss)
             else:
-                bbox_regression_losses.append(torch.tensor(0).float().cuda())  
+                bbox_regression_losses.append(torch.tensor(0.,requires_grad=True).cuda())  
 
             # compute landmarks loss
             if ldm_positive_indices.sum() > 0 :
@@ -220,7 +220,7 @@ class LossLayer(nn.Module):
                 ldm_regression_loss = self.smoothl1(ldm_targets, ldm_regression[ldm_positive_indices, :])
                 ldm_regression_losses.append(ldm_regression_loss)
             else:
-                ldm_regression_losses.append(torch.tensor(0).float().cuda())
+                ldm_regression_losses.append(torch.tensor(0.,requires_grad=True).cuda())
 
         return torch.stack(classification_losses), torch.stack(bbox_regression_losses),torch.stack(ldm_regression_losses)
         #return positive_indices_list, torch.stack(classification_losses), torch.stack(bbox_regression_losses),torch.stack(ldm_regression_losses)
