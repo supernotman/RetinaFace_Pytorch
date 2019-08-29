@@ -76,6 +76,7 @@ def main():
     return_layers = {'layer2':1,'layer3':2,'layer4':3}
     retinaface = torchvision_model.create_retinaface(return_layers)
 
+
     retinaface = retinaface.cuda()
     retinaface = torch.nn.DataParallel(retinaface).cuda()
     retinaface.training = True
@@ -93,9 +94,6 @@ def main():
 
     for epoch in range(args.epochs):
         retinaface.train()
-        #print('Current learning rate:',scheduler.get_lr()[0])
-        # retinaface.module.freeze_bn()
-        # retinaface.module.freeze_first_layer()
 
         # Training
         for iter_num,data in enumerate(dataloader_train):
@@ -110,7 +108,6 @@ def main():
 
             loss.backward()
             optimizer.step()
-            #epoch_loss.append(loss.item())
             
             if iter_num % args.verbose == 0:
                 log_str = "\n---- [Epoch %d/%d, Batch %d/%d] ----\n" % (epoch, args.epochs, iter_num, total_batch)
@@ -122,8 +119,6 @@ def main():
                     ['landmarks',str(ldm_regression_loss.item())]
                     ]
                 table = AsciiTable(table_data)
-                #table = SingleTable(table_data)
-                #table = DoubleTable(table_data)
                 log_str +=table.table
                 print(log_str)
                 # write the log to tensorboard
@@ -132,9 +127,6 @@ def main():
                 writer.add_scalar('box losses:',bbox_regression_loss.item(),iteration*args.verbose)
                 writer.add_scalar('landmark losses:',ldm_regression_loss.item(),iteration*args.verbose)
                 iteration +=1
-        
-        #scheduler.step()
-        #scheduler.step(np.mean(epoch_loss))	
 
         # Eval
         if epoch % args.eval_step == 0:

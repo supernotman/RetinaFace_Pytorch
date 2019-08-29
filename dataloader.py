@@ -254,7 +254,7 @@ class Resizer(object):
         resized_image = skimage.transform.resize(image,(int(rows*input_size / long_side),int(cols*input_size / long_side)))
         resized_image = resized_image * 255
         
-        assert (resized_image.shape[0]==640 or resized_image.shape[1]==640),'resized image size not 640'
+        assert (resized_image.shape[0]==input_size or resized_image.shape[1]==input_size), 'resized image size not {}'.format(input_size)
 
         if annots.shape[1] > 4 :
             annots = annots * scale

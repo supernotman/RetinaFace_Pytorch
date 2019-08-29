@@ -152,6 +152,7 @@ class RetinaFace(nn.Module):
         assert len(return_layers)>0,'There must be at least one return layers'
         self.body = _utils.IntermediateLayerGetter(backbone, return_layers)
         in_channels_stage2 = 256
+        # in_channels_stage2 = 64
         in_channels_list = [
             #in_channels_stage2,
             in_channels_stage2 * 2,
@@ -188,6 +189,12 @@ class RetinaFace(nn.Module):
             landmarkhead.append(LandmarkHead(inchannels,anchor_num))
         return landmarkhead
 
+    def freeze_bn(self):
+        '''Freeze BatchNorm layers.'''
+        for layer in self.modules():
+            if isinstance(layer, nn.BatchNorm2d):
+                layer.eval()
+
     def forward(self,inputs):
         if self.training:
             img_batch, annotations = inputs
@@ -217,6 +224,14 @@ class RetinaFace(nn.Module):
 
 def create_retinaface(return_layers,backbone_name='resnet50',anchors_num=3,pretrained=True):
     backbone = resnet.__dict__[backbone_name](pretrained=pretrained)
+    # freeze layer1
+    for name, parameter in backbone.named_parameters():
+        # if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+        #     parameter.requires_grad_(False)
+        if name == 'conv1.weight':
+            # print('freeze first conv layer...')
+            parameter.requires_grad_(False)
+
     model = RetinaFace(backbone,return_layers,anchor_nums=3)
 
     return model
