@@ -35,27 +35,13 @@ def get_args():
     parser.add_argument('--model_path', type=str, help='Path for model')
     parser.add_argument('--save_path', type=str, default='./out', help='Path for result image')
     parser.add_argument('--depth', help='Resnet depth, must be one of 18, 34, 50, 101, 152', type=int, default=50)
+    parser.add_argument('--scale', type=float, default=1.0, help='Image resize scale', )
     args = parser.parse_args()
 
     return args
 
 def main():
     args = get_args()
-
-	# Create the model
-    # if args.depth == 18:
-    #     RetinaFace = model.resnet18(num_classes=2, pretrained=True)
-    # elif args.depth == 34:
-    #     RetinaFace = model.resnet34(num_classes=2, pretrained=True)
-    # elif args.depth == 50:
-    #     RetinaFace = model.resnet50(num_classes=2, pretrained=True)
-    # elif args.depth == 101:
-    #     RetinaFace = model.resnet101(num_classes=2, pretrained=True)
-    # elif args.depth == 152:
-    #     RetinaFace = model.resnet152(num_classes=2, pretrained=True)
-    # else:
-    #     raise ValueError('Unsupported model depth, must be one of 18, 34, 50, 101, 152')
-
     # Create torchvision model
     return_layers = {'layer2':1,'layer3':2,'layer4':3}
     RetinaFace = torchvision_model.create_retinaface(return_layers)
@@ -73,12 +59,17 @@ def main():
     img = skimage.io.imread(args.image_path)
     img = torch.from_numpy(img)
     img = img.permute(2,0,1)
-    padded_img, _ = pad_to_square(img,0)
-    resized_img = resize(padded_img.float(),(640,640))
-    input_img = resized_img.unsqueeze(0).cuda()
+
+    if not args.scale == 1.0:
+        size1 = int(img.shape[1]/args.scale)
+        size2 = int(img.shape[2]/args.scale)
+        img = resize(img.float(),(size1,size2))
+
+    input_img = img.unsqueeze(0).float().cuda()
     picked_boxes, picked_landmarks = eval_widerface.get_detections(input_img, RetinaFace, score_threshold=0.5, iou_threshold=0.3)
 
-    np_img = resized_img.cpu().permute(1,2,0).numpy()
+    # np_img = resized_img.cpu().permute(1,2,0).numpy()
+    np_img = img.cpu().permute(1,2,0).numpy()
     np_img.astype(int)
     img = cv2.cvtColor(np_img.astype(np.uint8),cv2.COLOR_BGR2RGB)
 

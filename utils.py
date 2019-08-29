@@ -141,8 +141,10 @@ class RegressionTransform(nn.Module):
         # clip bboxes and landmarks
         B,C,H,W = img.shape
 
-        pred_boxes = torch.clamp(pred_boxes, min=0, max=H)
-        pred_landmarks = torch.clamp(pred_landmarks, min=0, max=H)
+        pred_boxes[:,:,::2] = torch.clamp(pred_boxes[:,:,::2], min=0, max=W)
+        pred_boxes[:,:,1::2] = torch.clamp(pred_boxes[:,:,1::2], min=0, max=H)
+        pred_landmarks[:,:,::2] = torch.clamp(pred_landmarks[:,:,::2], min=0, max=W)
+        pred_landmarks[:,:,1::2] = torch.clamp(pred_landmarks[:,:,1::2], min=0, max=H)
 
         return pred_boxes, pred_landmarks
 
