@@ -63,12 +63,14 @@ Recall: 0.7432201780921814
 Precision: 0.906913273261629
 ```
 
+##### Pretrained model
+You can download the model from [baidu cloud](https://pan.baidu.com/s/1jSxQ1kficgoychXX9b5crg) or [dropbox](https://www.dropbox.com/s/hvqveb6if724ise/model.pt?dl=0)
+
 ## Detect
 ```
 $ python detect.py --model_path out/model_epoch_200.pt --image_path 4.jpg
 ```
-<p align="center"><img src="assets/1.jpg" width="640"\></p>
-<p align="center"><img src="assets/3.jpg" width="640"\></p>
+<p align="center"><img src="assets/test1.jpg" width="640"\></p>
 
 ## Todo: 
 - [ ] Wider Face mAP calculation
