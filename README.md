@@ -67,10 +67,31 @@ Precision: 0.906913273261629
 You can download the model from [baidu cloud](https://pan.baidu.com/s/1jSxQ1kficgoychXX9b5crg) or [dropbox](https://www.dropbox.com/s/hvqveb6if724ise/model.pt?dl=0)
 
 ## Detect
+##### Image
 ```
-$ python detect.py --model_path out/model_epoch_200.pt --image_path 4.jpg
+$ python detect.py --model_path model.pt --image_path 4.jpg
 ```
+
+##### Video
+```
+$ python video_detect.py --model_path model.pt 
+```
+
 <p align="center"><img src="assets/test1.jpg" width="640"\></p>
+
+## Pose
+Hey, I find something interesting and add it in the code.
+Pose detection Hopenet: https://github.com/natanielruiz/deep-head-pose
+Now you can estimate pose with RetinaFace and Hopenet.
+Download [pose model](https://drive.google.com/file/d/1m25PrSE7g9D2q2XJVMR6IA7RaCvWSzCR/view)
+```
+$ python pose_detect.py --f_model model.pt --p_model hopenet.pkl --image_path test.jpg
+```
+also you can detect in video
+```
+$ python pose_detect.py --f_model model.pt --p_model hopenet.pkl --type video --video_path test.avi
+```
+<p align="center"><img src="assets/3_pose.jpg" width="640"\></p>
 
 ## Todo: 
 - [ ] Wider Face mAP calculation
