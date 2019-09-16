@@ -58,6 +58,8 @@ def main():
 
     out = cv2.VideoWriter('args.save_path', codec, fps, (width, height))
 
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
     while(True):
         ret, img = cap.read()
 
@@ -74,22 +76,25 @@ def main():
             img = resize(img.float(),(size1,size2))
 
         input_img = img.unsqueeze(0).float().cuda()
-        picked_boxes, picked_landmarks = eval_widerface.get_detections(input_img, RetinaFace, score_threshold=0.5, iou_threshold=0.3)
+        picked_boxes, picked_landmarks, picked_scores = eval_widerface.get_detections(input_img, RetinaFace, score_threshold=0.5, iou_threshold=0.3)
 
         # np_img = resized_img.cpu().permute(1,2,0).numpy()
         np_img = img.cpu().permute(1,2,0).numpy()
         np_img.astype(int)
         img = np_img.astype(np.uint8)
 
+
         for j, boxes in enumerate(picked_boxes):
             if boxes is not None:
-                for box,landmark in zip(boxes,picked_landmarks[j]):
+                for box,landmark,score in zip(boxes,picked_landmarks[j],picked_scores[j]):
                     cv2.rectangle(img,(box[0],box[1]),(box[2],box[3]),(0,0,255),thickness=2)
                     cv2.circle(img,(landmark[0],landmark[1]),radius=1,color=(0,0,255),thickness=2)
                     cv2.circle(img,(landmark[2],landmark[3]),radius=1,color=(0,255,0),thickness=2)
                     cv2.circle(img,(landmark[4],landmark[5]),radius=1,color=(255,0,0),thickness=2)
                     cv2.circle(img,(landmark[6],landmark[7]),radius=1,color=(0,255,255),thickness=2)
                     cv2.circle(img,(landmark[8],landmark[9]),radius=1,color=(255,255,0),thickness=2)
+                    cv2.putText(img, text=str(score.item())[:5], org=(box[0],box[1]), fontFace=font, fontScale=0.5,
+                                thickness=1, lineType=cv2.LINE_AA, color=(255, 255, 255))
 
         out.write(img)
         cv2.imshow('RetinaFace-Pytorch',img)

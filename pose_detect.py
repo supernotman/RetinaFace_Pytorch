@@ -81,7 +81,7 @@ def main():
             img = resize(img.float(),(size1,size2))
         
         input_img = img.unsqueeze(0).float().cuda()
-        picked_boxes, picked_landmarks = eval_widerface.get_detections(input_img, RetinaFace, 
+        picked_boxes, picked_landmarks, picked_scores = eval_widerface.get_detections(input_img, RetinaFace, 
                                                         score_threshold=0.5, iou_threshold=0.3)
 
         np_img = img.cpu().permute(1,2,0).numpy()

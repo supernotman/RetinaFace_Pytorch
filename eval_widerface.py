@@ -13,6 +13,7 @@ def get_detections(img_batch, model,score_threshold=0.5, iou_threshold=0.5):
         batch_size = classifications.shape[0]
         picked_boxes = []
         picked_landmarks = []
+        picked_scores = []
         
         for i in range(batch_size):
             classification = torch.exp(classifications[i,:,:])
@@ -30,6 +31,7 @@ def get_detections(img_batch, model,score_threshold=0.5, iou_threshold=0.5):
             if scores.shape[0] == 0:
                 picked_boxes.append(None)
                 picked_landmarks.append(None)
+                picked_scores.append(None)
                 continue
 
             bbox = bbox[positive_indices]
@@ -38,10 +40,13 @@ def get_detections(img_batch, model,score_threshold=0.5, iou_threshold=0.5):
             keep = ops.boxes.nms(bbox, scores, iou_threshold)
             keep_boxes = bbox[keep]
             keep_landmarks = landmark[keep]
+            keep_scores = scores[keep]
+            keep_scores.unsqueeze_(1)
             picked_boxes.append(keep_boxes)
             picked_landmarks.append(keep_landmarks)
+            picked_scores.append(keep_scores)
         
-        return picked_boxes, picked_landmarks
+        return picked_boxes, picked_landmarks, picked_scores
 
 def compute_overlap(a,b):
     area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
