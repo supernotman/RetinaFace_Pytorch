@@ -76,7 +76,7 @@ def evaluate(val_data,retinaFace,threshold=0.5):
         annots = data['annot'].cuda()
 
 
-        picked_boxes,_ = get_detections(img_batch,retinaFace)
+        picked_boxes,_,_ = get_detections(img_batch,retinaFace)
         recall_iter = 0.
         precision_iter = 0.
 
