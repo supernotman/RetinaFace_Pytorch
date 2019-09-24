@@ -66,11 +66,14 @@ def main():
     idx_tensor = torch.FloatTensor(idx_tensor).cuda()
 
     transformations = transforms.Compose([transforms.Scale(224),
-    transforms.CenterCrop(224), transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    transforms.CenterCrop(224), 
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
     if args.type == 'image':
-        img = cv2.imread(args.image_path)
+        cv2_img = cv2.imread(args.image_path)
+        img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2RGB)
 
         img = torch.from_numpy(img)
         img = img.permute(2,0,1)
@@ -107,6 +110,10 @@ def main():
 
                     bbox_height = abs(y_max - y_min)
                     face_img = img[y_min:y_max, x_min:x_max]
+                    # cv2.imshow('face_img', face_img)
+                    # cv2.imwrite('face_img.jpg', face_img)
+                    # cv2.waitKey(0)
+
                     face_img = Image.fromarray(face_img)
 
                     # Transform
@@ -120,20 +127,20 @@ def main():
                     yaw_predicted = F.softmax(yaw)
                     pitch_predicted = F.softmax(pitch)
                     roll_predicted = F.softmax(roll)
+
+                    # print("yaw_predicted", yaw_predicted)
+                    # print("pitch_predicted", pitch_predicted)
+                    # print("roll_predicted", roll_predicted)
+
                     # Get continuous predictions in degrees.
                     yaw_predicted = torch.sum(yaw_predicted.data[0] * idx_tensor) * 3 - 99
                     pitch_predicted = torch.sum(pitch_predicted.data[0] * idx_tensor) * 3 - 99
                     roll_predicted = torch.sum(roll_predicted.data[0] * idx_tensor) * 3 - 99
 
-                    utils.draw_axis(img, yaw_predicted, pitch_predicted, roll_predicted, tdx = (x_min + x_max) / 2, tdy= (y_min + y_max) / 2, size = bbox_height/2)
-                    cv2.rectangle(img,(box[0],box[1]),(box[2],box[3]),(255,0,255),thickness=2)
-                    # cv2.circle(img,(landmark[0],landmark[1]),radius=1,color=(0,0,255),thickness=2)
-                    # cv2.circle(img,(landmark[2],landmark[3]),radius=1,color=(0,255,0),thickness=2)
-                    # cv2.circle(img,(landmark[4],landmark[5]),radius=1,color=(255,0,0),thickness=2)
-                    # cv2.circle(img,(landmark[6],landmark[7]),radius=1,color=(0,255,255),thickness=2)
-                    # cv2.circle(img,(landmark[8],landmark[9]),radius=1,color=(255,255,0),thickness=2)
+                    utils.draw_axis(cv2_img, yaw_predicted, pitch_predicted, roll_predicted, tdx = (x_min + x_max) / 2, tdy= (y_min + y_max) / 2, size = bbox_height/2)
+                    cv2.rectangle(cv2_img,(box[0],box[1]),(box[2],box[3]),(255,0,255),thickness=2)
 
-            cv2.imshow('RetinaFace-Hopenet',img)
+            cv2.imshow('RetinaFace-Hopenet',cv2_img)
             key = cv2.waitKey()
 
     else:
@@ -152,7 +159,8 @@ def main():
         out = cv2.VideoWriter(args.out, codec, fps, (width, height))
 
         while(True):
-            ret, img = cap.read()
+            ret, cv2_img = cap.read()
+            img = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2RGB)
 
             if not ret:
                 print('Video open error.')
@@ -167,7 +175,7 @@ def main():
                 img = resize(img.float(),(size1,size2))
 
             input_img = img.unsqueeze(0).float().cuda()
-            picked_boxes, picked_landmarks = eval_widerface.get_detections(input_img, RetinaFace, 
+            picked_boxes, picked_landmarks, _ = eval_widerface.get_detections(input_img, RetinaFace, 
                                                         score_threshold=0.5, iou_threshold=0.3)
 
             # np_img = resized_img.cpu().permute(1,2,0).numpy()
@@ -212,17 +220,18 @@ def main():
                         pitch_predicted = torch.sum(pitch_predicted.data[0] * idx_tensor) * 3 - 99
                         roll_predicted = torch.sum(roll_predicted.data[0] * idx_tensor) * 3 - 99
 
-                        utils.draw_axis(img, yaw_predicted, pitch_predicted, roll_predicted, tdx = (x_min + x_max) / 2, tdy= (y_min + y_max) / 2, size = bbox_height/2)
-                        cv2.rectangle(img,(box[0],box[1]),(box[2],box[3]),(255,0,255),thickness=2)
+                        # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                        utils.draw_axis(cv2_img, yaw_predicted, pitch_predicted, roll_predicted, tdx = (x_min + x_max) / 2, tdy= (y_min + y_max) / 2, size = bbox_height/2)
+                        cv2.rectangle(cv2_img,(box[0],box[1]),(box[2],box[3]),(255,0,255),thickness=2)
                         # cv2.rectangle(img,(x_min,y_min),(x_max,y_max),(255,0,255),thickness=2)
-                        cv2.circle(img,(landmark[0],landmark[1]),radius=1,color=(0,0,255),thickness=2)
-                        cv2.circle(img,(landmark[2],landmark[3]),radius=1,color=(0,255,0),thickness=2)
-                        cv2.circle(img,(landmark[4],landmark[5]),radius=1,color=(255,0,0),thickness=2)
-                        cv2.circle(img,(landmark[6],landmark[7]),radius=1,color=(0,255,255),thickness=2)
-                        cv2.circle(img,(landmark[8],landmark[9]),radius=1,color=(255,255,0),thickness=2)
+                        cv2.circle(cv2_img,(landmark[0],landmark[1]),radius=1,color=(0,0,255),thickness=2)
+                        cv2.circle(cv2_img,(landmark[2],landmark[3]),radius=1,color=(0,255,0),thickness=2)
+                        cv2.circle(cv2_img,(landmark[4],landmark[5]),radius=1,color=(255,0,0),thickness=2)
+                        cv2.circle(cv2_img,(landmark[6],landmark[7]),radius=1,color=(0,255,255),thickness=2)
+                        cv2.circle(cv2_img,(landmark[8],landmark[9]),radius=1,color=(255,255,0),thickness=2)
 
-            out.write(img)
-            cv2.imshow('RetinaFace-Pytorch',img)
+            out.write(cv2_img)
+            cv2.imshow('RetinaFace-Pytorch',cv2_img)
             key = cv2.waitKey(1)
             if key == ord('q'):
                 print('Now quit.')
