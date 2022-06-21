@@ -1,5 +1,5 @@
 scikit_image==0.15.0
-numpy==1.16.4
+numpy==1.22.0
 terminaltables==3.1.0
 torch==1.1.0
 tqdm==4.32.1
